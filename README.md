@@ -24,3 +24,6 @@ sudo apt install softhsm2
 5. `cargo fmt`: formats all rust files according to `rustfmt.toml`
 6. `cargo test`: runs unit-tests.
 
+## Documentation
+- [PKCS11](https://thalesdocs.com/gphsm/ptk/5.9/docs/Content/PTK-C_Program/intro_PKCS11.htm)
+
