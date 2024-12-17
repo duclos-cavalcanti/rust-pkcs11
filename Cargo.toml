@@ -1,0 +1,12 @@
+[package]
+name = "project-template"
+version = "0.1.0"
+edition = "2021"
+authors = ["Daniel Duclos-Cavalcanti daniel.duclos.cavalcanti@gmail.com"]
+description = "This is a rust template project"
+repository = "https://github.com/duclos-cavalcanti/project-template"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+cryptoki = "0.12"
+tokio = { version = "1.42.0", features = ["full"] }
