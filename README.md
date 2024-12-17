@@ -8,6 +8,8 @@
 
 ### Dependencies
 - [SoftHSM](https://github.com/softhsm/SoftHSMv2)
+- [Cryptoki](https://github.com/parallaxsecond/rust-cryptoki)
+- [Tokio](https://github.com/tokio-rs/tokio)
 
 ```bash 
 sudo apt update
@@ -21,10 +23,4 @@ sudo apt install softhsm2
 4. `cargo check`: checks if project compiles without building it.
 5. `cargo fmt`: formats all rust files according to `rustfmt.toml`
 6. `cargo test`: runs unit-tests.
-
-## License
-
-Licensed under:
- * MIT license
-   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
