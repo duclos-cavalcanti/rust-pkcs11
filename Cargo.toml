@@ -8,5 +8,5 @@ repository = "https://github.com/duclos-cavalcanti/project-template"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-cryptoki = "0.12"
 tokio = { version = "1.42.0", features = ["full"] }
+# cryptoki = "0.12"
