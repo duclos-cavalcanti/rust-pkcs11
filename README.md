@@ -8,12 +8,13 @@
 
 ### Dependencies
 - [SoftHSM](https://github.com/softhsm/SoftHSMv2)
-- [Cryptoki](https://github.com/parallaxsecond/rust-cryptoki)
+- [Protobufs](https://protobuf.dev/)
 - [Tokio](https://github.com/tokio-rs/tokio)
 
 ```bash 
 sudo apt update
 sudo apt install softhsm2
+sudo apt install libprotobuf-c-dev libprotobuf-dev protobuf-compiler protobuf-codegen
 ```
 
 ### Setup
