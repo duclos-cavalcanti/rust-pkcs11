@@ -8,7 +8,7 @@
 
 ### Dependencies
 - [SoftHSM](https://github.com/softhsm/SoftHSMv2)
-- [Protobufs](https://protobuf.dev/)
+- [Cryptoki](https://github.com/parallaxsecond/rust-cryptoki)
 - [Tokio](https://github.com/tokio-rs/tokio)
 
 ```bash 
