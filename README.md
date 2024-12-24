@@ -13,8 +13,7 @@
 
 ```bash 
 sudo apt update
-sudo apt install softhsm2
-sudo apt install libprotobuf-c-dev libprotobuf-dev protobuf-compiler protobuf-codegen
+sudo apt install softhsm2 opensc
 ```
 
 ### Setup
@@ -23,14 +22,29 @@ sudo apt install libprotobuf-c-dev libprotobuf-dev protobuf-compiler protobuf-co
 find /usr/lib/ -name "libsofthsm2.so"
 ```
 
-1. Initialize token:
+1. Add user to `softhsm` group:
+```bash
+sudo usermod -aG softhsm $(whoami)
+```
+
+2. Initialize token:
 ```bash 
 softhsm2-util --init-token --slot 0 --label "MyToken" --pin 1234 --so-pin 1234
 ```
 
-2. Verify token slots:
+3. Verify token slots:
 ```bash 
-pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --list-slots
+softhsm2-util --show-slots
+```
+
+4. Generate key-pair 
+```bash 
+pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin 1234 --keypairgen --key-type rsa:2048 --id 01 --label "TestKey"
+```
+
+5. Verify key-pair 
+```bash 
+pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin 1234 --list-objects
 ```
 
 

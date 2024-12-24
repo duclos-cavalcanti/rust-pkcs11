@@ -9,5 +9,5 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 tokio = { version = "1.42.0", features = ["full"] }
-
-# [build-dependencies]
+cryptoki = "0.8.0"
+colorized = "1.0.0"

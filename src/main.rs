@@ -1,41 +1,39 @@
-mod message;
-
 use std::error::Error;
 
-use message::{Message, MessageFlag};
-use tokio::sync::mpsc;
+mod manager;
+mod utils;
 
-fn consume(msg: &Message) -> Option<bool> {
-    println!("SERVER RECEIVED: id={} | flag={:?} | data={}", msg.id, msg.flag, msg.data);
-    if let MessageFlag::End = msg.flag {
-        return None;
-    }
-    Some(true)
-}
+fn main() -> Result<(), Box<dyn Error>> {
+    let manager = manager::Manager::new()?;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let (sender, mut receiver) = mpsc::channel::<Message>(10);
-    let handle: tokio::task::JoinHandle<Result<(), &str>> = tokio::spawn(async move {
-        while let Some(msg) = receiver.recv().await {
-            if let None = consume(&msg) {
+    loop {
+        let prompt  = "Enter command (l = list slots, s = session, c = create, e = exit): ";
+        let command = utils::io::capture(prompt)?;
+
+        match command.as_str() {
+            "l" => {
+                manager.list()?;
+            }
+
+            "s" => {
+                if let Err(e) = manager.session() {
+                    println!("{}", utils::io::red(&e.to_string()));
+                }
                 break;
             }
-        }
-        Ok(())
-    });
 
-    for i in 0..6 {
-        let mut msg = Message::new(i, MessageFlag::Req, "Hello from Main!");
-        if i == 5 {
-            msg.id   = 999;
-            msg.flag = MessageFlag::End;
-        }
+            "e" => {
+                println!("{}", utils::io::green("Exiting..."));
+                break;
+            }
 
-        sender.send(msg).await.unwrap();
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            _ => {
+                println!("{}", utils::io::red("Unknown command..."));
+                break;
+            }  
+
+        }
     }
-    
-    handle.abort();
+
     Ok(())
 }
