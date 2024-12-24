@@ -1,7 +1,13 @@
 #include <iostream>
+#include <fstream>
+#include <string>
+#include "message.pb.h"
 
-int main(int argc, char* argv[])
-{
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+int main(int argc, char* argv[]) {
   std::cout << "Hello World" << std::endl;
 
   system("sleep 10s");
