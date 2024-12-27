@@ -2,7 +2,16 @@ syntax = "proto3";
 
 package ProtoMessage;
 
+enum ProtoMessageType {
+    ACK = 0;
+    LIST = 1;
+    LOGIN = 2;
+}
+
 message ProtoMessage {
     int32 id = 1;
-    string data = 2;
+    ProtoMessageType flag = 2;
+    int64 integer = 3;
+    int32 repeat = 4;
+    repeated string data = 5;
 }
