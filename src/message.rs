@@ -1,23 +1,28 @@
-#[derive(Debug, Clone)]
-pub enum MessageFlag {
-    Ack,
-    Req,
-    End,
+use std::error::Error;
+
+pub mod proto_message {
+    include!(concat!(env!("OUT_DIR"), "/proto_message.rs"));
 }
 
-#[derive(Debug, Clone)]
-pub struct Message {
-    pub id: i32,
-    pub flag: MessageFlag,
-    pub data: String,
-}
+use prost::Message;
 
-impl Message {
-    pub fn new(id: i32, flag: MessageFlag, data: &str) -> Self {
-        Self {
-            id,
-            flag,
-            data: data.to_string(),
-        }
+pub fn make(id: i32, data: &str) -> proto_message::ProtoMessage {
+    proto_message::ProtoMessage {
+        id,
+        data: data.to_string(),
     }
+}
+
+pub fn deser(bytes: &[u8]) -> Result<proto_message::ProtoMessage, Box<dyn Error>> {
+    match proto_message::ProtoMessage::decode(bytes) {
+        Ok(m)  => Ok(m),
+        Err(e) => Err(Box::from(format!("Failed Deserialization: {}", e.to_string())))
+
+    }
+}
+
+pub fn ser(message: &proto_message::ProtoMessage) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut buf = Vec::new();
+    message.encode(&mut buf)?;
+    Ok(buf)
 }

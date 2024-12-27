@@ -8,8 +8,6 @@ use cryptoki::types::AuthPin;
 use cryptoki::object::{Attribute, ObjectClass, ObjectHandle};
 use cryptoki::mechanism::Mechanism;
 
-use crate::utils;
-
 struct Pkcs { 
     pkcs: Pkcs11,
 }
@@ -18,7 +16,6 @@ impl Pkcs {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let pkcs = Pkcs11::new("/usr/lib/softhsm/libsofthsm2.so")?;
         pkcs.initialize(CInitializeArgs::OsThreads)?;
-
         Ok(Self {pkcs})
     }
 
@@ -70,17 +67,15 @@ impl Manager {
     }
 
     pub fn session(&self) -> Result<(), Box<dyn Error>> {
-        let slot    = self.slot()?;
-        let session = self.login(slot)?;
+        let slot    = self.slot(1)?;
+        let session = self.login(slot, "1234")?;
 
-        let data = utils::io::capture("Enter data: ")?;
-        let data_bytes = data.as_bytes();
+        let data = "DATA".as_bytes();
 
-        let enc = self.encrypt(&session, data_bytes)?;
-        let sgn = self.sign(&session, data_bytes)?;
+        let enc = self.encrypt(&session, data)?;
+        let sgn = self.sign(&session, data)?;
 
-        println!("DATA: {}",     data);
-        println!("RAW: {:02X?}", data_bytes);
+        println!("DATA: {:02X?}", data);
         println!("ENC: {:02X?}", enc);
         println!("SGN: {:02X?}", sgn);
 
@@ -112,16 +107,14 @@ impl Manager {
         Ok(ciphertext)
     }
 
-    pub fn login(&self, slot: Slot) -> Result<Session, Box<dyn Error>> {
-        let pin     = utils::io::capture("Enter User PIN: ")?;
+    pub fn login(&self, slot: Slot, pin: &str) -> Result<Session, Box<dyn Error>> {
         let session = self.p.session(slot)?;
-
         session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
+
         Ok(session)
     }
 
-    pub fn slot(&self) -> Result<Slot, Box<dyn Error>> {
-        let id: u64 = utils::io::capture("Enter Slot ID: ")?.parse()?;
+    pub fn slot(&self, id: u64) -> Result<Slot, Box<dyn Error>> {
         let slots = self.p.slots().unwrap();
         for s in slots {
             if s.id() == id {

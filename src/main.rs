@@ -1,38 +1,39 @@
 use std::error::Error;
 
+use tokio::net::TcpListener;
+use tokio::io::AsyncReadExt;
+
 mod manager;
+mod message;
 mod utils;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let manager = manager::Manager::new()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let manager    = manager::Manager::new()?;
+    println!("BINDING");
 
+    let connection = TcpListener::bind("127.0.0.1:9091").await?;
+    println!("SERVER UP ON: 127.0.0.1:9091");
+
+    let (mut socket, addr) = connection.accept().await?;
+    println!("CONNECTION AVAILABLE: {:?}", addr);
+
+    let mut buf = vec![0u8; 1024];
     loop {
-        let prompt  = "Enter command (l = list slots, s = session, c = create, e = exit): ";
-        let command = utils::io::capture(prompt)?;
-
-        match command.as_str() {
-            "l" => {
-                manager.list()?;
-            }
-
-            "s" => {
-                if let Err(e) = manager.session() {
-                    println!("{}", utils::io::red(&e.to_string()));
-                }
+        let n = match socket.read(&mut buf).await {
+            Ok(0) => {
+                println!("Socket closed");
+                break;
+            },
+            Ok(n) => n,
+            Err(e) => {
+                eprintln!("Failed to read from socket: {:?}", e);
                 break;
             }
+        };
 
-            "e" => {
-                println!("{}", utils::io::green("Exiting..."));
-                break;
-            }
-
-            _ => {
-                println!("{}", utils::io::red("Unknown command..."));
-                break;
-            }  
-
-        }
+        let m = message::deser(&buf[..n])?;
+        println!("Message: {:?}", m);
     }
 
     Ok(())
