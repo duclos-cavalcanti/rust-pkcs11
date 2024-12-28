@@ -1,94 +1,50 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <chrono>
 #include <thread>
+
+#include "client.h"
 #include "message.h"
+#include "socket.h"
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+const auto IP   = std::string("127.0.0.1");
+const auto PORT = 9091;
 
-#define PORT 9091
-#define BUFFER_SIZE 1024
+void run() {
+    int  i = 0;
+    auto client = Client(IP, PORT);
+    const std::vector<std::string> data = {"Hello", "World"};
 
-static struct sockaddr_in addr;
-static char rx[BUFFER_SIZE] = { 0 };
-
-int send(int sockfd, const std::string& data) {
-    if ( (send(sockfd, data.data(), data.size(), 0)) < 0 ) {
-        std::cerr << "Failed to send" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return 0;
-}
-
-int recv(int sockfd) {
-    int n = 0;
-    if ( (n = read(sockfd, rx, BUFFER_SIZE)) < 0) {
-        std::cerr << "Failed to read" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return n;
-}
-
-int connect() {
-    int sockfd;
-    if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-        std::cerr << "Failed to create socket" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    addr.sin_family       = AF_INET;
-    addr.sin_port         = htons(PORT);
-    addr.sin_addr.s_addr  = inet_addr("127.0.0.1");
-
-    if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        std::cerr << "Failed TCP connection" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    std::cout << "CONNECTED TO IP: " << inet_ntoa(addr.sin_addr) << std::endl;
-    return sockfd;
-}
-
-int client() {
-    int  i = 0, n, sockfd = connect();
-    std::vector<std::string> data = { "Hello World" };
-
+    client.connect();
     while(1) {
-        auto m = message(i, ProtoMessage::ProtoMessageType::ACK, data=data);
-        auto r = ProtoMessage::ProtoMessage();
-        std::string data;
+        auto m = Message();
 
-        if (!m.SerializeToString(&data)) {
-            std::cerr << "Failed message serialization" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        m.set_id(i);
+        m.set_flag(MessageType::LIST);
+        m.set_repeat(data.size());
+        for (auto& str: data) m.add_data(str);
 
-        send(sockfd, data);
+        client.send(m);
+        auto r = client.recv();
+        std::cout << "RECV: \n" << r.DebugString() << std::endl;
 
-        n = recv(sockfd);
-        if (!r.ParseFromArray(rx, n)) {
-            std::cerr << "Failed message deserialization" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        std::cout << "RECV: " << r.DebugString() << std::endl;
         if ( (++i) == 10 ) 
             break;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
-
-    close(sockfd);
-    std::cout << "CLOSED SOCKET" << std::endl;
-
-    return 0;
 }
 
 int main(int argc, char* argv[]) {
-    int ret = client();
-    google::protobuf::ShutdownProtobufLibrary();
-    return ret;
+    try {
+        run();
+        google::protobuf::ShutdownProtobufLibrary();
+        return 0;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 }
