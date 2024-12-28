@@ -1,48 +1,38 @@
+#![allow(dead_code)]
+
 use std::error::Error;
-use std::time::Duration;
 
-use tokio::net::TcpListener;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::time::sleep;
-
-mod manager;
-mod message;
 mod utils;
+mod server;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let manager    = manager::Manager::new()?;
-    println!("BINDING");
+use server::Server;
+use server::message::{ProtoMessage, ProtoMessageType};
 
-    let connection = TcpListener::bind("127.0.0.1:9091").await?;
-    println!("SERVER UP ON: 127.0.0.1:9091");
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut server = Server::new("127.0.0.1", 9091)?;
 
-    let (mut socket, addr) = connection.accept().await?;
-    println!("CONNECTION AVAILABLE: {:?}", addr);
-
-    let mut rx = vec![0u8; 1024];
     loop {
-        let n = match socket.read(&mut rx).await {
-            Ok(0) => {
-                println!("SOCKET CLOSED");
-                break;
-            },
-            Ok(n) => n,
-            Err(e) => {
-                return Err(Box::from(format!("Failed to read: {}", e.to_string())))
-            }
+        let Some(message) = server.recv()? else {
+            break;
         };
 
-        let m = message::deser(&rx[..n])?;
-        println!("RECV: {:?}", m);
+        println!("RECV: {:?}", message);
+        let data: Vec<String> = message.data
+            .iter()
+            .cloned()
+            .chain(std::iter::once("Back".to_string()))
+            .collect();
 
-        let m = message::message(m.id, 
-                                 message::ProtoMessageType::Ack, 
-                                 Some(42), 
-                                 vec!["Foo".to_string(), "Bar".to_string()]);
-        let tx = message::ser(&m)?;
-        socket.write_all(&tx[..tx.len()]).await?;
-        println!("SENT: {:?}", m);
+        let reply = ProtoMessage {
+            id: message.id,
+            flag: ProtoMessageType::Ack as i32,
+            integer: 0,
+            repeat: data.len() as i32,
+            data: data,
+        };
+
+        server.send(&reply)?;
+        println!("RECV: {:?}", message);
     }
 
     Ok(())
