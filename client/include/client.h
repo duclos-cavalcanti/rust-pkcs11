@@ -3,6 +3,7 @@
 
 #include "socket.h"
 #include "message.h"
+#include "log.h"
 
 #define BUFFER_SIZE 1024
 
@@ -14,9 +15,14 @@ public:
     int     connect();
     int     send(const Message& m);
     Message recv();
+    Message exchange(const Message& m);
+
+    Message list(void);
 
 private:
+    int     _tick;
     Socket _socket;
+    Logger _logger;
     char   _buffer[BUFFER_SIZE];
 };
 

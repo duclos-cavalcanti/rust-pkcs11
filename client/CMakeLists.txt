@@ -9,6 +9,7 @@ set (CMAKE_CXX_STANDARD 11)
 
 find_package(PkgConfig REQUIRED)
 find_package(Protobuf REQUIRED)
+find_package(Curses REQUIRED)
 
 pkg_search_module(PROTOBUF REQUIRED protobuf)
 
@@ -25,8 +26,8 @@ PROTOBUF_GENERATE_CPP(
     ${PROTO_FILES}
 )
 
-message("PROTO_SRCS: ${PROTO_SRCS}")
-message("PROTO_HDRS: ${PROTO_HDRS}")
+# message("PROTO_SRCS: ${PROTO_SRCS}")
+# message("PROTO_HDRS: ${PROTO_HDRS}")
 
 set (DEBUG_FLAGS
     "-g")
@@ -45,8 +46,8 @@ set(CMAKE_CXX_FLAGS
 
 file(GLOB SOURCES           "src/*.cpp")
 set(PROJECT_SOURCES         ${SOURCES} ${PROTO_SRCS} ${PROTO_HDRS})
-set(PROJECT_INCLUDES        ${PROJECT_SOURCE_DIR}/include ${PROTOBUF_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/build)
-set(PROJECT_LIBRARIES       ${PROTOBUF_LIBRARIES})
+set(PROJECT_INCLUDES        ${PROJECT_SOURCE_DIR}/include ${PROTOBUF_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/build ${CURSES_INCLUDE_DIR})
+set(PROJECT_LIBRARIES       ${PROTOBUF_LIBRARIES} ${CURSES_LIBRARIES})
 
 include_directories(${PROJECT_INCLUDES})
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
