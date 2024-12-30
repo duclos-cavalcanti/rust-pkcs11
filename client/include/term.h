@@ -1,43 +1,48 @@
 #ifndef __TERM__H
 #define __TERM__H
 
+#include "main.h"
+#include "message.h"
+
 #include <vector>
+#include <memory>
 #include <string>
 
 #include <ncurses.h>
 
-class MENU {
+class TERM {
 public:
-    MENU(void): cur(0) { };
-    ~MENU() = default;
-
-    int cur;
-    const std::vector<std::string> options = {
-        "List Slots",
-        "Login Session",
-        "Encrypt",
-    };
-};
-
-class Term {
-public:
-    Term(void);
-    ~Term();
+    TERM(void);
+    ~TERM();
 
     int draw(void);
     int refresh(void);
     int input(void);
-    int handle(int ch);
+    void clear(WINDOW* win);
+    REQUEST handle(int ch);
+    void    output(REQUEST& req, Message& m);
 
 private:
+    std::string capture(std::string prompt, int height = 5, int width = 40);
+
     void drawBorders(void);
     void drawMenu(void);
     void drawKeys(void);
 
-    WINDOW* window;
-    MENU menu;
+    struct MENU {
+        int cur;
+        const std::vector<std::string> options = {
+            "List Slots",
+            "Login Session",
+            "Encrypt",
+        };
+    };
 
-    int row, col;
+    WINDOW* window;
+    WINDOW* out = nullptr;
+    MENU    menu;
+    STATE   state;
+    int     rows, cols;
 };
 
 #endif /* __TERM__H */

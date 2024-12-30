@@ -12,7 +12,6 @@ message ProtoMessage {
     int32 id = 1;
     ProtoMessageType flag = 2;
     int64 integer = 3;
-    int32 repeat = 4;
-    bool  err = 5;
-    repeated string data = 6;
+    bool  err = 4;
+    repeated string data = 5;
 }

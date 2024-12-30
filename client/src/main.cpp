@@ -14,18 +14,19 @@ const auto IP   = std::string("127.0.0.1");
 const auto PORT = 9091;
 
 void run() {
-    // Client client(IP, PORT);
-    Term   term{};
+    Client client(IP, PORT);
+    TERM   term{};
 
     while(1) {
         term.draw();
         term.refresh();
-        int ch = term.input();
-        
-        if (ch == 'q') 
-            break;
+        auto request = term.handle(term.input());
 
-        term.handle(ch);
+        if (request.state == STATE::EXIT)  break;
+        if (request.state == STATE::START) continue;
+
+        auto reply = client.request(request);
+        term.output(request, reply);
     }
 }
 

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{Write};
 
 use colored::Colorize;
 

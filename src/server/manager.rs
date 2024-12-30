@@ -23,13 +23,13 @@ impl Manager {
     pub fn list(&self) -> Result<Vec<String>, Box<dyn Error>> {
         let slots = self.pkcs.get_all_slots()?;
         let mut data: Vec<String>  = Vec::new();
-
         for slot in slots {
             let Ok(token) = self.pkcs.get_token_info(slot) else { continue; };
-            let entry = format!("Slot {:?} | Token Label {} | Initialized {}", slot, token.label(), token.token_initialized());
-            data.push(entry.to_string());
+            if token.token_initialized() {
+                let entry = format!("{:?}|{}", slot, token.label());
+                data.push(entry.to_string());
+            }
         }
-
         Ok(data)
     }
 

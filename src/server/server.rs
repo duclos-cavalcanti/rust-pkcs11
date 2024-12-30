@@ -15,10 +15,8 @@ pub struct Server {
 impl Server {
     pub fn new(ipaddr: &str, port: i32) -> Result<Self, Box<dyn Error>> {
         let manager = Manager::new()?;
-        let socket = Socket::new(ipaddr, port)?;
         let mut logger = Logger::new(None)?;
-        
-        logger.log(format!("SERVER LISTENING ON {}:{}", ipaddr, port), None)?;
+        let socket = Socket::new(ipaddr, port, &mut logger)?;
         Ok(Self {socket:socket, manager:manager, logger:logger})
     }
 
@@ -57,7 +55,6 @@ impl Server {
             id: message.id,
             flag: ProtoMessageType::Ack as i32,
             integer: 0,
-            repeat: 0,
             err: true,
             data: vec!{e.to_string()},
         };
@@ -73,7 +70,7 @@ impl Server {
             Ok(_)  => buf.len(),
             Err(e) => return Err(Box::from(format!("Failed Serialization: {}", e.to_string())))
         };
-        self.logger.log(format!("SERVER SENT: \n{:?}", message), Some(Level::EVENT))?;
+        self.logger.log(format!("SERVER SENT: {:?}", message), Some(Level::EVENT))?;
         self.socket.send(&buf[..n])?;
         Ok(n)
     }

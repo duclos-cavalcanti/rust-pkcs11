@@ -43,13 +43,18 @@ Message Client::exchange(const Message& m) {
     return this->recv();
 }
 
-Message Client::list(void) {
+Message Client::request(REQUEST& req) {
+    auto it = this->_map.find(req.state);
+    if (it != this->_map.end()) return it->second();
+    else                        throw std::runtime_error("Invalid request state");
+}
+
+Message Client::listRequest(void) {
     auto m = Message();
-    m.set_id(1);
+    m.set_id(this->_tick++);
     m.set_flag(MessageType::LIST);
-    m.set_repeat(0);
     m.set_err(false);
-    return m;
+    return this->exchange(m);
 }
 
 Client::~Client() {
