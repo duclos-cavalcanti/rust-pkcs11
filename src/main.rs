@@ -6,7 +6,6 @@ mod utils;
 mod server;
 
 use server::Server;
-use server::message::{ProtoMessage, ProtoMessageType};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut server = Server::new("127.0.0.1", 9091)?;
@@ -16,23 +15,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             break;
         };
 
-        println!("RECV: {:?}", message);
-        let data: Vec<String> = message.data
-            .iter()
-            .cloned()
-            .chain(std::iter::once("Back".to_string()))
-            .collect();
-
-        let reply = ProtoMessage {
-            id: message.id,
-            flag: ProtoMessageType::Ack as i32,
-            integer: 0,
-            repeat: data.len() as i32,
-            data: data,
+        let _n = match server.handle(&message) {
+            Ok(reply) => server.send(&reply)?,
+            Err(e)    => server.error(&message, e)?
         };
-
-        server.send(&reply)?;
-        println!("RECV: {:?}", message);
     }
 
     Ok(())
