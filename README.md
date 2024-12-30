@@ -47,14 +47,12 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin 1234 --keypai
 pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin 1234 --list-objects
 ```
 
+## Client
+### Dependencies
 
-## Development
-1. `cargo build`: builds project and creates target folder with outputted files and executable.
-2. `cargo build --release`: stores optimized executable in `target/release`.
-3. `cargo run`: builds project and runs executable.
-4. `cargo check`: checks if project compiles without building it.
-5. `cargo fmt`: formats all rust files according to `rustfmt.toml`
-6. `cargo test`: runs unit-tests.
+```bash 
+sudo apt-get install libncurses5-dev libncursesw5-dev
+```
 
 ## Documentation
 - [PKCS11](https://thalesdocs.com/gphsm/ptk/5.9/docs/Content/PTK-C_Program/intro_PKCS11.htm)
