@@ -8,11 +8,10 @@ repository = "https://github.com/duclos-cavalcanti/rust-pkcs11"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-tokio = { version = "1.42.0", features = ["full"] }
+colored = "2.2.0"
 cryptoki = "0.8.0"
 prost = "0.11"
 prost-types = "0.11"
-colorized = "1.0.0"
 
 [build-dependencies]
 prost-build = "0.13.4"
