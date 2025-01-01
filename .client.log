@@ -1,2 +1,0 @@
-[INFO]: CLIENT CONNECTED TO 127.0.0.1:9091
-[[34mEVENT[0m]: CLIENT RECV: ProtoMessage { id: 1, flag: Ack, integer: 0, err: false, data: ["Slot { slot_id: 786700906 }|MyToken"] }

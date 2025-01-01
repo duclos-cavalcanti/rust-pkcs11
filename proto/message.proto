@@ -5,13 +5,15 @@ package ProtoMessage;
 enum ProtoMessageType {
     ACK = 0;
     LIST = 1;
-    LOGIN = 2;
+    ENCRYPT = 2;
+    SIGN = 3;
 }
 
 message ProtoMessage {
     int32 id = 1;
     ProtoMessageType flag = 2;
-    int64 integer = 3;
-    bool  err = 4;
-    repeated string data = 5;
+    uint64 slot_id = 3;
+    string pin = 4;
+    bool  err = 5;
+    repeated string data = 6;
 }

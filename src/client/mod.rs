@@ -3,5 +3,5 @@
 mod socket;
 mod client;
 
-pub use client::{Client, Request, State};
+pub use client::{Client, Request};
 

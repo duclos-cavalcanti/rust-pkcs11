@@ -1,23 +1,25 @@
-use crate::message::{ProtoMessage, ProtoMessageType};
+use crate::message::{ProtoMessage, ProtoMessageType, ProtoFactory};
 use crate::utils::log::{Logger, Level};
-
-use prost::Message;
 
 use super::socket::Socket;
 use std::error::Error;
 
-
-#[derive(Hash, Eq, PartialEq, Debug)]
-pub enum State {
-    Start,
-    List,
-    Login,
-    Encrypt,
-    Exit,
+pub struct Request {
+    mtype: ProtoMessageType,
+    i: u64,
+    s: String,
+    data: String,
 }
 
-pub struct Request {
-    pub state: State,
+impl Request {
+    pub fn new(mtype: ProtoMessageType, i: Option<u64>, s: Option<String>, data: Option<String>) -> Self {
+        Self {
+            mtype: mtype, 
+            i: i.unwrap_or(0),
+            s: s.unwrap_or(String::new()), 
+            data: data.unwrap_or(String::new()), 
+        }
+    }
 }
 
 pub struct Client {
@@ -28,10 +30,10 @@ pub struct Client {
 
 impl Client {
     pub fn new(ipaddr: &str, port: i32) -> Result<Self, Box<dyn Error>> {
-        let mut logger = Logger::new(Some(".client.log"))?;
+        let mut logger = Logger::new(Some(".pkcs11.log"))?;
         let client = Client {
             socket: Socket::new(ipaddr, port, &mut logger)?,
-            tick: 0,
+            tick: 1,
             logger: logger
         };
 
@@ -48,21 +50,15 @@ impl Client {
         if n == 0 {
             Ok(None)
         } else {
-            let m =  match ProtoMessage::decode(&buf[..n]) {
-                Ok(m) => m,
-                Err(e) => return Err(Box::from(format!("Failed Deserialization: {}", e.to_string())))
-            };
+            let m = ProtoFactory::decode(&mut buf, n)?;
             self.logger.log(format!("CLIENT RECV: {:?}", m), Some(Level::EVENT))?;
             Ok(Some(m))
         }
     }
 
     pub fn send(&mut self, message: &ProtoMessage) -> Result<usize, Box<dyn Error>> {
-        let mut buf = Vec::new();
-        let n = match message.encode(&mut buf) {
-            Ok(_)  => buf.len(),
-            Err(e) => return Err(Box::from(format!("Failed Serialization: {}", e.to_string())))
-        };
+        let (buf, n) = ProtoFactory::encode(message)?;
+        self.logger.log(format!("CLIENT SENT: {:?}", message), Some(Level::EVENT))?;
         self.socket.send(&buf[..n])?;
         Ok(n)
     }
@@ -72,24 +68,20 @@ impl Client {
         self.recv()
     }
 
-    pub fn request(&mut self, request: &Request) -> Result<Option<ProtoMessage>, Box<dyn Error>> {
-        match request.state {
-            State::List => self.list_request(),
-            _ => Err(Box::from("Invalid state"))
-        }
-    }
-
-    pub fn list_request(&mut self) -> Result<Option<ProtoMessage>, Box<dyn Error>> {
-        self.tick += 1;
-        let message = ProtoMessage {
-            id: self.tick,
-            flag: ProtoMessageType::List as i32,
-            integer: 0,
-            err: false,
-            data: vec!{},
+    pub fn request(&mut self, request: &Request) -> Result<Vec<String>, Box<dyn Error>> {
+        let message = match request.mtype {
+            ProtoMessageType::List      => ProtoFactory::list(self.tick),
+            ProtoMessageType::Encrypt   => ProtoFactory::enc(self.tick, request.i, request.s.clone(), request.data.clone()),
+            ProtoMessageType::Sign      => ProtoFactory::sign(self.tick, request.i, request.s.clone(), request.data.clone()),
+            _ => return Err(Box::from("Invalid state"))
         };
-        let reply = self.exchange(&message)?;
-        Ok(reply)
+
+        self.tick += 1;
+        match self.exchange(&message) {
+            Ok(Some(reply)) => Ok(reply.data),
+            Ok(None)        => Err(Box::from("Unexpected connection closure")),
+            Err(e)          => Err(Box::from(format!("{}", e))),
+        }
     }
 }
 

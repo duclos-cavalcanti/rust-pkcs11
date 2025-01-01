@@ -26,24 +26,15 @@ impl Manager {
         for slot in slots {
             let Ok(token) = self.pkcs.get_token_info(slot) else { continue; };
             if token.token_initialized() {
-                let entry = format!("{:?}|{}", slot, token.label());
+                let entry = format!("SlotID:{}, Token: {}", slot.id(), token.label());
                 data.push(entry.to_string());
             }
         }
         Ok(data)
     }
 
-    pub fn session(&mut self, id: u64, pin: &str) -> Result<(), Box<dyn Error>> {
-        let slot    = self.slot(id)?;
-        let session = self.pkcs.open_rw_session(slot)?;
-
-        session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
-
-        self.map.insert(id, session);
-        Ok(())
-    }
-
-    pub fn encrypt(&self, session: &Session, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn encrypt(&mut self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+        let session = self.session(id, pin)?;
         let search  = vec![Attribute::Class(ObjectClass::PUBLIC_KEY)];
         let objects = session.find_objects(&search)?;
         let key     = objects.get(0).ok_or("No public key found.")?;
@@ -55,7 +46,8 @@ impl Manager {
         Ok(ciphertext)
         }
 
-    pub fn sign(&self, session: &Session, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn sign(&mut self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+        let session = self.session(id, pin)?;
         let search  = vec![Attribute::Class(ObjectClass::PRIVATE_KEY)];
         let objects = session.find_objects(&search)?;
         let key     = objects.get(0).ok_or("No private key found.")?;
@@ -67,6 +59,14 @@ impl Manager {
 
         Ok(ciphertext)
     }
+
+    fn session(&mut self, id: u64, pin: &str) -> Result<Session, Box<dyn Error>> {
+        let slot    = self.slot(id)?;
+        let session = self.pkcs.open_rw_session(slot)?;
+        session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
+        Ok(session)
+    }
+
 
     fn slot(&self, id: u64) -> Result<Slot, Box<dyn Error>> {
         let slots = self.pkcs.get_all_slots()?;

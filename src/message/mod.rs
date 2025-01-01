@@ -1,5 +1,3 @@
-mod proto_message {
-    include!(concat!(env!("OUT_DIR"), "/proto_message.rs"));
-}
+mod message;
 
-pub use proto_message::{ProtoMessage, ProtoMessageType};
+pub use message::{ProtoMessage, ProtoMessageType, ProtoFactory};

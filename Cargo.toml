@@ -1,5 +1,5 @@
 [package]
-name = "rust_pkcs"
+name = "rust_pkcs11"
 version = "0.1.0"
 edition = "2021"
 authors = ["Daniel Duclos-Cavalcanti daniel.duclos.cavalcanti@gmail.com"]
@@ -11,6 +11,7 @@ license = "MIT OR Apache-2.0"
 cryptoki = "0.8.0"
 prost = "0.11"
 prost-types = "0.11"
+base64 = "0.21"
 colored = "2.2.0"
 
 [build-dependencies]
