@@ -1,10 +1,13 @@
 use std::error::Error;
 
+use crate::message::{ProtoMessage, ProtoMessageType};
+use crate::utils::log::{Logger, Level};
+
 use super::socket::Socket;
-use super::message::{Message, ProtoMessage, ProtoMessageType};
 use super::manager::Manager;
-use super::log::{Logger, Level};
 use super::handler::{Handler, ListHandler};
+
+use prost::Message;
 
 pub struct Server {
     manager: Manager,

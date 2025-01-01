@@ -1,8 +1,9 @@
 use std::error::Error;
 
-use super::handler::Handler;
 use crate::server::manager::Manager;
-use crate::server::message::{ProtoMessage, ProtoMessageType};
+use crate::message::{ProtoMessage, ProtoMessageType};
+
+use super::handler::Handler;
 
 pub struct ListHandler<'a> {
     manager: &'a Manager,

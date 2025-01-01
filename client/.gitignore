@@ -1,8 +1,0 @@
-bin/*
-
-build/*
-
-.cache
-.cache/
-.cache/*
-

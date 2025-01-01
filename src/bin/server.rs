@@ -1,11 +1,6 @@
-#![allow(dead_code)]
-
 use std::error::Error;
 
-mod utils;
-mod server;
-
-use server::Server;
+use rust_pkcs11::server::{Server};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut server = Server::new("127.0.0.1", 9091)?;

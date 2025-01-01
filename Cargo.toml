@@ -1,5 +1,5 @@
 [package]
-name = "rust-pkcs11"
+name = "rust_pkcs"
 version = "0.1.0"
 edition = "2021"
 authors = ["Daniel Duclos-Cavalcanti daniel.duclos.cavalcanti@gmail.com"]
@@ -8,10 +8,22 @@ repository = "https://github.com/duclos-cavalcanti/rust-pkcs11"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-colored = "2.2.0"
 cryptoki = "0.8.0"
 prost = "0.11"
 prost-types = "0.11"
+colored = "2.2.0"
 
 [build-dependencies]
 prost-build = "0.13.4"
+
+[[bin]]
+name = "client"
+path = "src/bin/client.rs"
+
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[lib]
+name = "rust_pkcs11"
+path = "src/lib.rs"

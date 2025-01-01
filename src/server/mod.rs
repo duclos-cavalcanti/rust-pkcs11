@@ -2,9 +2,7 @@
 
 mod socket;
 mod manager;
-mod log;
+mod server;
 
 pub mod handler;
-pub mod message;
-pub mod server;
 pub use server::Server;
