@@ -1,6 +1,8 @@
 use crate::message::{ProtoMessage, ProtoMessageType};
 use crate::server::manager::Manager;
 
+use base64::prelude::*;
+
 use std::error::Error;
 
 pub trait Handler {
@@ -62,7 +64,7 @@ impl<'a> Handler for EncryptHandler<'a> {
         let data:String = message.data[0].clone();
         let ciphertext = self.manager.encrypt(id, &pin, data.as_bytes())?;
 
-        reply.data.push(base64::encode(ciphertext));
+        reply.data.push(BASE64_STANDARD.encode(ciphertext));
         Ok(reply)
     }
 }
@@ -93,7 +95,7 @@ impl<'a> Handler for SignHandler<'a> {
         let data:String = message.data[0].clone();
         let ciphertext = self.manager.sign(id, &pin, data.as_bytes())?;
 
-        reply.data.push(base64::encode(ciphertext));
+        reply.data.push(BASE64_STANDARD.encode(ciphertext));
         Ok(reply)
     }
 }

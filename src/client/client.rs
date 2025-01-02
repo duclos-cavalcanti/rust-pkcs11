@@ -30,7 +30,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(ipaddr: &str, port: i32) -> Result<Self, Box<dyn Error>> {
-        let mut logger = Logger::new(Some(".pkcs11.log"))?;
+        let mut logger = Logger::new(None)?;
         let client = Client {
             socket: Socket::new(ipaddr, port, &mut logger)?,
             tick: 1,
