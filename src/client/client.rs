@@ -28,6 +28,12 @@ pub struct Client {
     logger: Logger
 }
 
+impl Drop for Client {
+    fn drop(&mut self) {
+        let _ = self.logger.log(String::from("CLIENT CLOSED"), None);
+    }
+}
+
 impl Client {
     pub fn new(ipaddr: &str, port: i32) -> Result<Self, Box<dyn Error>> {
         let mut logger = Logger::new(None)?;
@@ -50,9 +56,13 @@ impl Client {
         if n == 0 {
             Ok(None)
         } else {
-            let m = ProtoFactory::decode(&mut buf, n)?;
-            self.logger.log(format!("CLIENT RECV: {:?}", m), Some(Level::EVENT))?;
-            Ok(Some(m))
+            let message = ProtoFactory::decode(&mut buf, n)?;
+            if message.err {
+                self.logger.log(format!("CLIENT RECV: {:?}", message), Some(Level::URGENT))?;
+            } else {
+                self.logger.log(format!("CLIENT RECV: {:?}", message), Some(Level::EVENT))?;
+            }
+            Ok(Some(message))
         }
     }
 

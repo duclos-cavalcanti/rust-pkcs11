@@ -60,14 +60,17 @@ impl Server {
             data: vec!{e.to_string()},
         };
 
-        self.logger.log(format!("ERROR HANDLING MESSAGE: {}", e), Some(Level::URGENT))?;
         let n = self.send(&reply)?;
         Ok(n)
     }
 
     pub fn send(&mut self, message: &ProtoMessage) -> Result<usize, Box<dyn Error>> {
         let (buf, n) = ProtoFactory::encode(message)?;
-        self.logger.log(format!("SERVER SENT: {:?}", message), Some(Level::EVENT))?;
+        if message.err {
+            self.logger.log(format!("SERVER SENT: {:?}", message), Some(Level::URGENT))?;
+        } else {
+            self.logger.log(format!("SERVER SENT: {:?}", message), Some(Level::EVENT))?;
+        }
         self.socket.send(&buf[..n])?;
         Ok(n)
     }
