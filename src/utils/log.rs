@@ -3,6 +3,8 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{Write};
 use std::sync::{mpsc::Sender};
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread;
 
 use colored::Colorize;
 
@@ -26,7 +28,6 @@ impl fmt::Display for Level {
 pub enum LoggerType {
     Stdout, 
     File(String), 
-    Concurrent(Sender<String>)
 }
 
 pub struct Logger {
@@ -36,7 +37,6 @@ pub struct Logger {
 impl Logger {
     pub fn new(logtype: LoggerType) -> Result<Self, Box<dyn Error>> {
         let writer: Box<dyn Writer + Send> = match logtype {
-            LoggerType::Concurrent(sender) => Box::new(ConcurrentWriter::new(sender)?),
             LoggerType::File(f) => Box::new(FileWriter::new(&f)?),
             LoggerType::Stdout => Box::new(StdoutWriter::new())
         };
@@ -94,19 +94,30 @@ impl Writer for StdoutWriter {
     }
 }
 
-struct ConcurrentWriter {
-    writer: Sender<String>,
+pub struct ConcurrentLogger {
+    sender: Sender<String>,
 }
 
-impl ConcurrentWriter {
+impl ConcurrentLogger {
     pub fn new(sender: Sender<String>) -> Result<Self, Box<dyn Error>> {
-        Ok(Self { writer: sender })
+        Ok(Self { sender: sender })
     }
-}
 
-impl Writer for ConcurrentWriter {
-    fn write(&mut self, text: &str) -> Result<(), Box<dyn Error>> {
-        self.writer.send(format!("{}", text)).unwrap();
+    pub fn log(&self, text: String, level:Option<Level>) -> Result<(), Box<dyn Error>> {
+        let level = level.unwrap_or(Level::INFO);
+        let thread_id = thread::current().id();
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        let text = match level {
+            Level::INFO     => format!("[{}][{}][{:?}]: {}", timestamp, String::from("INFO").white(), thread_id, text),
+            Level::EVENT    => format!("[{}][{}][{:?}]: {}", timestamp, String::from("EVENT").blue(), thread_id, text),
+            Level::URGENT   => format!("[{}][{}][{:?}]: {}", timestamp, String::from("URGENT").red(), thread_id, text),
+        };
+        if let Err(e) = self.sender.send(text) {
+            return Err(Box::from(format!("Failed to send message: {}", e)));
+        }
         Ok(())
     }
 }

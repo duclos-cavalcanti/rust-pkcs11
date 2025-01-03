@@ -55,17 +55,19 @@ fn main() -> Result<(), Box<dyn Error>> {
         let sender_clone = sender.clone();
         handles.push(
             thread::spawn(move || {
-                let result = Client::new("127.0.0.1", 9091, sender_clone);
+                let result = Client::new("127.0.0.1", 9091, sender_clone.clone());
                 let Ok(mut client) = result else {
-                    eprintln!("Error: {}", result.err().unwrap());
+                    sender_clone.send(format!("Error: {}", result.err().unwrap())).unwrap();
                     return;
                 };
                 if let Err(e) = client.request(&r) {
-                    eprintln!("Error processing request: {}", e);
+                    sender_clone.send(format!("Error processing request: {}", e)).unwrap();
                 }
             })
         );
     }
+
+    drop(sender);
 
     for handle in handles {
         if let Err(_) = handle.join() {

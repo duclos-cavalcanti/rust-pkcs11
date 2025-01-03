@@ -1,5 +1,6 @@
 use crate::message::{ProtoMessageType, ProtoFactory};
 use crate::socket::Socket;
+use crate::utils::log::{ConcurrentLogger, Level};
 
 use std::sync::{mpsc::Sender};
 use std::net::{TcpStream};
@@ -26,27 +27,29 @@ impl Request {
 pub struct Client {
     socket: Socket,
     tick: i32,
-    sender: Sender<String>
+    logger: ConcurrentLogger,
 }
 
 impl Drop for Client {
     fn drop(&mut self) {
-        let _ = self.sender.send(String::from("CLIENT CLOSED")).unwrap();
+        let _ = self.logger.log(String::from("CLIENT CLOSED"), Some(Level::INFO));
     }
 }
 
 impl Client {
     pub fn new(ipaddr: &str, port: i32, sender:Sender<String>) -> Result<Self, Box<dyn Error>> {
-        let sender = sender;
-        let stream = match TcpStream::connect(format!("{}:{}", ipaddr, port)) {
+        let addr = format!("{}:{}", ipaddr, port);
+        let logger = ConcurrentLogger::new(sender)?;
+        let stream = match TcpStream::connect(addr.clone()) {
             Ok(s)  => s,
             Err(e) => return Err(Box::from(format!("Error: {}", e)))
         };
 
+        logger.log(format!("CLIENT CONNECTED: {}", addr), Some(Level::INFO))?;
         let client = Client {
             socket: Socket::new(stream),
             tick: 1,
-            sender: sender
+            logger: logger
         };
 
         Ok(client)
@@ -66,7 +69,7 @@ impl Client {
         // send message
         match self.socket.send(&message) { 
             Ok(_)  => { 
-                self.sender.send(format!("CLIENT SENT: {:?}", message)).unwrap();
+                self.logger.log(format!("CLIENT SENT: {:?}", message), Some(Level::EVENT))?;
             },
             Err(e) => return Err(Box::from(format!("{}", e))),
         }
@@ -74,7 +77,7 @@ impl Client {
         // receive message
         match self.socket.recv() {
             Ok(Some(reply)) => { 
-                self.sender.send(format!("CLIENT RECV: {:?}", reply)).unwrap();
+                self.logger.log(format!("CLIENT RECV: {:?}", reply), Some(Level::EVENT))?;
             },
             Ok(None)        => return Err(Box::from("Connection closed")),
             Err(e)          => return Err(Box::from(format!("{}", e))),
