@@ -9,6 +9,11 @@ pub use proto_message::{ProtoMessage, ProtoMessageType};
 
 pub struct ProtoFactory;
 
+pub enum ProtoError {
+    MessageError(ProtoMessage, String), 
+    HandlingError(i32, String)
+}
+
 impl ProtoFactory {
     pub fn list(id: i32) -> ProtoMessage {
         ProtoMessage {
@@ -40,6 +45,22 @@ impl ProtoFactory {
             pin: pin.clone(),
             err: false,
             data: vec!{data.clone()},
+        }
+    }
+
+    pub fn err(p_err: ProtoError) -> ProtoMessage {
+        let (id, e) = match p_err {
+           ProtoError::MessageError(m, e)   => (m.id, e), 
+           ProtoError::HandlingError(id, e) => (id, e)
+        };
+
+        ProtoMessage {
+            id: id,
+            flag: ProtoMessageType::Ack as i32,
+            slot_id: 0,
+            pin: String::new(),
+            err: true,
+            data: vec!{e},
         }
     }
 

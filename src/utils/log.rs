@@ -2,6 +2,7 @@ use std::fmt;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Write};
+use std::sync::{mpsc::Sender};
 
 use colored::Colorize;
 
@@ -22,15 +23,22 @@ impl fmt::Display for Level {
     }
 }
 
+pub enum LoggerType {
+    Stdout, 
+    File(String), 
+    Concurrent(Sender<String>)
+}
+
 pub struct Logger {
     writer: Box<dyn Writer + Send>,
 }
 
 impl Logger {
-    pub fn new(fpath: Option<&str>) -> Result<Self, Box<dyn Error>> {
-        let writer: Box<dyn Writer + Send> = match fpath {
-            Some(f) => Box::new(FileWriter::new(f)?),
-            None => Box::new(StdoutWriter::new())
+    pub fn new(logtype: LoggerType) -> Result<Self, Box<dyn Error>> {
+        let writer: Box<dyn Writer + Send> = match logtype {
+            LoggerType::Concurrent(sender) => Box::new(ConcurrentWriter::new(sender)?),
+            LoggerType::File(f) => Box::new(FileWriter::new(&f)?),
+            LoggerType::Stdout => Box::new(StdoutWriter::new())
         };
 
         Ok(Self { writer: writer })
@@ -44,7 +52,6 @@ impl Logger {
             Level::EVENT    => format!("[{}]: {}", ltext.blue(), text),
             Level::URGENT   => format!("[{}]: {}", ltext.red(), text),
         };
-
         self.writer.write(&text)?;
         Ok(())
     }
@@ -87,3 +94,19 @@ impl Writer for StdoutWriter {
     }
 }
 
+struct ConcurrentWriter {
+    writer: Sender<String>,
+}
+
+impl ConcurrentWriter {
+    pub fn new(sender: Sender<String>) -> Result<Self, Box<dyn Error>> {
+        Ok(Self { writer: sender })
+    }
+}
+
+impl Writer for ConcurrentWriter {
+    fn write(&mut self, text: &str) -> Result<(), Box<dyn Error>> {
+        self.writer.send(format!("{}", text)).unwrap();
+        Ok(())
+    }
+}

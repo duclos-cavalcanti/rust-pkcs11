@@ -1,3 +1,3 @@
 mod message;
 
-pub use message::{ProtoMessage, ProtoMessageType, ProtoFactory};
+pub use message::{ProtoMessage, ProtoMessageType, ProtoFactory, ProtoError};

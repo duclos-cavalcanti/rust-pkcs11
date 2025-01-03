@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+use std::thread;
+use std::sync::mpsc;
+
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -36,10 +39,38 @@ fn parse() -> Result<Vec<Request>, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = Client::new("127.0.0.1", 9091)?;
-    let requests   = parse()?;
+    let (sender, receiver) = mpsc::channel::<String>();
+    let requests        = parse()?;
+    let mut handles     = Vec::new();
+    
+    handles.push(
+        thread::spawn(move || {
+            while let Ok(text) = receiver.recv() {
+                println!("{}", text);
+            }
+        })
+    );
+
     for r in requests {
-        let _ = client.request(&r)?;
+        let sender_clone = sender.clone();
+        handles.push(
+            thread::spawn(move || {
+                let result = Client::new("127.0.0.1", 9091, sender_clone);
+                let Ok(mut client) = result else {
+                    eprintln!("Error: {}", result.err().unwrap());
+                    return;
+                };
+                if let Err(e) = client.request(&r) {
+                    eprintln!("Error processing request: {}", e);
+                }
+            })
+        );
+    }
+
+    for handle in handles {
+        if let Err(_) = handle.join() {
+            eprintln!("Thread panicked");
+        }
     }
 
     Ok(())

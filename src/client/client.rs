@@ -1,7 +1,8 @@
-use crate::message::{ProtoMessage, ProtoMessageType, ProtoFactory};
-use crate::utils::log::{Logger, Level};
+use crate::message::{ProtoMessageType, ProtoFactory};
+use crate::socket::Socket;
 
-use super::socket::Socket;
+use std::sync::{mpsc::Sender};
+use std::net::{TcpStream};
 use std::error::Error;
 
 pub struct Request {
@@ -25,60 +26,34 @@ impl Request {
 pub struct Client {
     socket: Socket,
     tick: i32,
-    logger: Logger
+    sender: Sender<String>
 }
 
 impl Drop for Client {
     fn drop(&mut self) {
-        let _ = self.logger.log(String::from("CLIENT CLOSED"), None);
+        let _ = self.sender.send(String::from("CLIENT CLOSED")).unwrap();
     }
 }
 
 impl Client {
-    pub fn new(ipaddr: &str, port: i32) -> Result<Self, Box<dyn Error>> {
-        let mut logger = Logger::new(None)?;
+    pub fn new(ipaddr: &str, port: i32, sender:Sender<String>) -> Result<Self, Box<dyn Error>> {
+        let sender = sender;
+        let stream = match TcpStream::connect(format!("{}:{}", ipaddr, port)) {
+            Ok(s)  => s,
+            Err(e) => return Err(Box::from(format!("Error: {}", e)))
+        };
+
         let client = Client {
-            socket: Socket::new(ipaddr, port, &mut logger)?,
+            socket: Socket::new(stream),
             tick: 1,
-            logger: logger
+            sender: sender
         };
 
         Ok(client)
     }
 
-    pub fn recv(&mut self) -> Result<Option<ProtoMessage>, Box<dyn Error>> {
-        let mut buf = vec![0u8; 1024];
-        let n = match self.socket.recv(&mut buf) {
-            Ok(n)  => n, 
-            Err(e) => return Err(Box::from(format!("{}", e.to_string()))),
-        };
-
-        if n == 0 {
-            Ok(None)
-        } else {
-            let message = ProtoFactory::decode(&mut buf, n)?;
-            if message.err {
-                self.logger.log(format!("CLIENT RECV: {:?}", message), Some(Level::URGENT))?;
-            } else {
-                self.logger.log(format!("CLIENT RECV: {:?}", message), Some(Level::EVENT))?;
-            }
-            Ok(Some(message))
-        }
-    }
-
-    pub fn send(&mut self, message: &ProtoMessage) -> Result<usize, Box<dyn Error>> {
-        let (buf, n) = ProtoFactory::encode(message)?;
-        self.logger.log(format!("CLIENT SENT: {:?}", message), Some(Level::EVENT))?;
-        self.socket.send(&buf[..n])?;
-        Ok(n)
-    }
-
-    pub fn exchange(&mut self, message: &ProtoMessage) -> Result<Option<ProtoMessage>, Box<dyn Error>> {
-        self.send(message)?;
-        self.recv()
-    }
-
-    pub fn request(&mut self, request: &Request) -> Result<Vec<String>, Box<dyn Error>> {
+    pub fn request(&mut self, request: &Request) -> Result<(), Box<dyn Error>> {
+        // receive message
         let message = match request.mtype {
             ProtoMessageType::List      => ProtoFactory::list(self.tick),
             ProtoMessageType::Encrypt   => ProtoFactory::enc(self.tick, request.i, request.s.clone(), request.data.clone()),
@@ -87,11 +62,25 @@ impl Client {
         };
 
         self.tick += 1;
-        match self.exchange(&message) {
-            Ok(Some(reply)) => Ok(reply.data),
-            Ok(None)        => Err(Box::from("Unexpected connection closure")),
-            Err(e)          => Err(Box::from(format!("{}", e))),
+
+        // send message
+        match self.socket.send(&message) { 
+            Ok(_)  => { 
+                self.sender.send(format!("CLIENT SENT: {:?}", message)).unwrap();
+            },
+            Err(e) => return Err(Box::from(format!("{}", e))),
         }
+
+        // receive message
+        match self.socket.recv() {
+            Ok(Some(reply)) => { 
+                self.sender.send(format!("CLIENT RECV: {:?}", reply)).unwrap();
+            },
+            Ok(None)        => return Err(Box::from("Connection closed")),
+            Err(e)          => return Err(Box::from(format!("{}", e))),
+        }
+
+        Ok(())
     }
 }
 

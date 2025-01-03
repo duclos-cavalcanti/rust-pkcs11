@@ -1,40 +1,52 @@
 use std::error::Error;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 use cryptoki::context::{CInitializeArgs, Pkcs11};
 use cryptoki::slot::Slot;
-use cryptoki::session::{UserType, Session};
+use cryptoki::session::{UserType};
 use cryptoki::types::AuthPin;
 use cryptoki::object::{Attribute, ObjectClass};
 use cryptoki::mechanism::Mechanism;
 
 pub struct Manager {
     pkcs: Pkcs11,
-    map: HashMap<u64, Session>, 
+    slots: HashMap<u64, Arc<Mutex<Slot>>>,
 }
 
 impl Manager {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let pkcs = Pkcs11::new("/usr/lib/softhsm/libsofthsm2.so")?;
         pkcs.initialize(CInitializeArgs::OsThreads)?;
-        Ok(Self {pkcs:pkcs, map: HashMap::new()})
+
+        let mut map = HashMap::new();
+        for slot in pkcs.get_all_slots()? {
+            map.insert(slot.id(), Arc::new(Mutex::new(slot)));
+        }
+
+        Ok(Self { pkcs, slots: map })
     }
 
     pub fn list(&self) -> Result<Vec<String>, Box<dyn Error>> {
-        let slots = self.pkcs.get_all_slots()?;
-        let mut data: Vec<String>  = Vec::new();
-        for slot in slots {
-            let Ok(token) = self.pkcs.get_token_info(slot) else { continue; };
+        let mut data = Vec::new();
+        for (id, slot) in &self.slots {
+            let slot = slot.lock().unwrap();
+            let Ok(token) = self.pkcs.get_token_info(*slot) else { continue; };
             if token.token_initialized() {
-                let entry = format!("SlotID:{}, Token: {}", slot.id(), token.label());
-                data.push(entry.to_string());
+                let entry = format!("SlotID:{}, Token: {}", id, token.label());
+                data.push(entry);
             }
         }
         Ok(data)
     }
 
     pub fn encrypt(&mut self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-        let session = self.session(id, pin)?;
+        let slot = self.slot(id)?;
+        let slot = slot.lock().unwrap();
+        let session = self.pkcs.open_rw_session(*slot)?;
+
+        session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
+
         let search  = vec![Attribute::Class(ObjectClass::PUBLIC_KEY)];
         let objects = session.find_objects(&search)?;
         let key     = objects.get(0).ok_or("No public key found.")?;
@@ -47,7 +59,12 @@ impl Manager {
         }
 
     pub fn sign(&mut self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-        let session = self.session(id, pin)?;
+        let slot = self.slot(id)?;
+        let slot = slot.lock().unwrap();
+        let session = self.pkcs.open_rw_session(*slot)?;
+
+        session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
+
         let search  = vec![Attribute::Class(ObjectClass::PRIVATE_KEY)];
         let objects = session.find_objects(&search)?;
         let key     = objects.get(0).ok_or("No private key found.")?;
@@ -60,22 +77,10 @@ impl Manager {
         Ok(ciphertext)
     }
 
-    fn session(&mut self, id: u64, pin: &str) -> Result<Session, Box<dyn Error>> {
-        let slot    = self.slot(id)?;
-        let session = self.pkcs.open_rw_session(slot)?;
-        session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
-        Ok(session)
-    }
-
-
-    fn slot(&self, id: u64) -> Result<Slot, Box<dyn Error>> {
-        let slots = self.pkcs.get_all_slots()?;
-        for s in slots {
-            if s.id() == id {
-                return Ok(s);
-            }
+    fn slot(&self, id: u64) -> Result<Arc<Mutex<Slot>>, Box<dyn Error>> {
+        match self.slots.get(&id) {
+            Some(slot) => Ok(Arc::clone(slot)),
+            None => Err(Box::from(format!("Slot ID {} does not exist", id))),
         }
-        
-        return Err(Box::from("Invalid Slot ID"));
     }
 }

@@ -1,6 +1,5 @@
 #[allow(dead_code)] 
 
-mod socket;
 mod manager;
 mod server;
 
