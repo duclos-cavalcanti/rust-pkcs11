@@ -65,7 +65,7 @@ impl Manager {
 
         session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
 
-        let search  = vec![Attribute::Class(ObjectClass::PUBLIC_KEY)];
+        let search  = vec![Attribute::Class(ObjectClass::PRIVATE_KEY)];
         let objects = session.find_objects(&search)?;
         let key     = objects.get(0).ok_or("No public key found.")?;
         let ciphertext = session.decrypt(

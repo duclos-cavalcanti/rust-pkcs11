@@ -72,12 +72,18 @@ impl Client {
             let id: [u8; 16] = rng.gen();
             let id = BASE64_STANDARD.encode(id);
 
-            // receive message
+            // form message
             let message = match request.mtype {
                 ProtoMessageType::List      => ProtoFactory::list(id, self.tick),
                 ProtoMessageType::Encrypt   => ProtoFactory::enc(id,  self.tick, request.i, &request.s, &request.data),
                 ProtoMessageType::Sign      => ProtoFactory::sign(id, self.tick, request.i, &request.s, &request.data),
-                ProtoMessageType::Decrypt   => ProtoFactory::dec(id, self.tick, request.i, &request.s, &request.data),
+                ProtoMessageType::Decrypt   =>  {
+                    let Some(data) = self.history.get(&request.data) else {
+                        self.logger.log(format!("To-be-decrypted data not found in history: {}", request.data), Some(Level::URGENT))?;
+                        continue;
+                    };
+                    ProtoFactory::dec(id, self.tick, request.i, &request.s, &data)
+                }
                 _ => return Err(Box::from("Invalid state"))
             };
 

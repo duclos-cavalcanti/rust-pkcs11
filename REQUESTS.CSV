@@ -1,4 +1,5 @@
 Encrypt,786700906,1234,HelloEncrypt
+Decrypt,786700906,1234,HelloEncrypt
 Encrypt,786700906,1234,HelloEncrypt
 Sign,786700906,1234,HelloSign
 Encrypt,786700906,1234,NewData
