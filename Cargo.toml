@@ -12,6 +12,7 @@ cryptoki = "0.8.0"
 prost = "0.11"
 prost-types = "0.11"
 base64 = "0.21"
+rand = "0.8"
 colored = "2.2.0"
 
 [build-dependencies]

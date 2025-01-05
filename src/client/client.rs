@@ -5,7 +5,12 @@ use crate::utils::log::{ConcurrentLogger, Level};
 use std::sync::{mpsc::Sender};
 use std::net::{TcpStream};
 use std::error::Error;
+use std::collections::HashMap;
 
+use rand::Rng;
+use base64::prelude::*;
+
+#[derive(Debug, Clone)]
 pub struct Request {
     mtype: ProtoMessageType,
     i: u64,
@@ -26,8 +31,9 @@ impl Request {
 
 pub struct Client {
     socket: Socket,
+    logger: ConcurrentLogger, 
     tick: i32,
-    logger: ConcurrentLogger,
+    history: HashMap<String, String>,
 }
 
 impl Drop for Client {
@@ -44,45 +50,63 @@ impl Client {
             Ok(s)  => s,
             Err(e) => return Err(Box::from(format!("Error: {}", e)))
         };
+        let map = HashMap::new();
 
         logger.log(format!("CLIENT CONNECTED: {}", addr), Some(Level::INFO))?;
         let client = Client {
             socket: Socket::new(stream),
-            tick: 1,
-            logger: logger
+            logger: logger, 
+            tick: 1, 
+            history: map
         };
 
         Ok(client)
     }
 
-    pub fn request(&mut self, request: &Request) -> Result<(), Box<dyn Error>> {
-        // receive message
-        let message = match request.mtype {
-            ProtoMessageType::List      => ProtoFactory::list(self.tick),
-            ProtoMessageType::Encrypt   => ProtoFactory::enc(self.tick, request.i, request.s.clone(), request.data.clone()),
-            ProtoMessageType::Sign      => ProtoFactory::sign(self.tick, request.i, request.s.clone(), request.data.clone()),
-            _ => return Err(Box::from("Invalid state"))
-        };
+    pub fn request(&mut self, requests: &Vec<Request>) -> Result<(), Box<dyn Error>> {
+        // rng init
+        let mut rng = rand::thread_rng();
 
-        self.tick += 1;
+        for request in requests {
+            // create request ID
+            let id: [u8; 16] = rng.gen();
+            let id = BASE64_STANDARD.encode(id);
 
-        // send message
-        match self.socket.send(&message) { 
-            Ok(_)  => { 
-                self.logger.log(format!("CLIENT SENT: {:?}", message), Some(Level::EVENT))?;
-            },
-            Err(e) => return Err(Box::from(format!("{}", e))),
+            // receive message
+            let message = match request.mtype {
+                ProtoMessageType::List      => ProtoFactory::list(id, self.tick),
+                ProtoMessageType::Encrypt   => ProtoFactory::enc(id,  self.tick, request.i, &request.s, &request.data),
+                ProtoMessageType::Sign      => ProtoFactory::sign(id, self.tick, request.i, &request.s, &request.data),
+                ProtoMessageType::Decrypt   => ProtoFactory::dec(id, self.tick, request.i, &request.s, &request.data),
+                _ => return Err(Box::from("Invalid state"))
+            };
+
+            // increment tick
+            self.tick += 1;
+
+            // send message
+            match self.socket.send(&message) { 
+                Ok(_)  => { 
+                    self.logger.log(format!("CLIENT SENT: {:?}", message), Some(Level::EVENT))?;
+                },
+                Err(e) => return Err(Box::from(format!("{}", e))),
+            }
+
+            // receive message
+            match self.socket.recv() {
+                Ok(Some(reply)) => { 
+                    let mut level = Level::EVENT;
+                    if reply.err { level = Level::URGENT; }
+                    self.logger.log(format!("CLIENT RECV: {:?}", reply), Some(level))?;
+
+                    if message.flag == ProtoMessageType::Encrypt as i32 {
+                        self.history.insert(message.data[0].clone(), reply.data[0].clone());
+                    }
+                },
+                Ok(None)        => return Err(Box::from("Connection closed")),
+                Err(e)          => return Err(Box::from(format!("{}", e))),
+            }
         }
-
-        // receive message
-        match self.socket.recv() {
-            Ok(Some(reply)) => { 
-                self.logger.log(format!("CLIENT RECV: {:?}", reply), Some(Level::EVENT))?;
-            },
-            Ok(None)        => return Err(Box::from("Connection closed")),
-            Err(e)          => return Err(Box::from(format!("{}", e))),
-        }
-
         Ok(())
     }
 }

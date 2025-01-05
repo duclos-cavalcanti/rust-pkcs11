@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::sync::{Arc, Mutex, mpsc::Sender};
+use std::sync::{Arc, mpsc::Sender};
 use std::net::{TcpListener};
 
 use crate::message::{ProtoMessageType, ProtoFactory, ProtoError};
@@ -7,10 +7,10 @@ use crate::utils::log::{ConcurrentLogger, Level};
 use crate::socket::Socket;
 
 use super::manager::Manager;
-use super::handler::{Handler, ListHandler, EncryptHandler, SignHandler};
+use super::handler::{Handler, ListHandler, EncryptHandler, SignHandler, DecryptHandler};
 
 pub struct Server {
-    manager:    Arc<Mutex<Manager>>,
+    manager:    Arc<Manager>,
     logger:     Arc<ConcurrentLogger>,
     listener:   TcpListener,
 }
@@ -18,8 +18,8 @@ pub struct Server {
 impl Server {
     pub fn new(ipaddr: &str, port: i32, sender:Sender<String>) -> Result<Self, Box<dyn Error>> {
         let addr        = format!("{}:{}", ipaddr, port);
+        let manager     = Arc::new(Manager::new()?);
         let listener    = TcpListener::bind(addr.clone())?;
-        let manager     = Arc::new(Mutex::new(Manager::new()?));
         let logger      = Arc::new(ConcurrentLogger::new(sender)?);
 
         logger.log(format!("SERVER BOUND: {}", addr), None)?;
@@ -47,7 +47,7 @@ impl Server {
 
     fn handle(
         socket: &mut Socket,
-        manager: Arc<Mutex<Manager>>,
+        manager: Arc<Manager>,
         logger: Arc<ConcurrentLogger>
     ) -> Result<(), Box<dyn Error>> {
         loop {
@@ -70,11 +70,11 @@ impl Server {
             };
 
             // create handler
-            let mut mgr   = manager.lock().unwrap();
-            let mut handler: Box<dyn Handler> = match message.flag {
-                f if f == ProtoMessageType::List as i32 => Box::new(ListHandler::new(&mut *mgr)),
-                f if f == ProtoMessageType::Encrypt as i32 => Box::new(EncryptHandler::new(&mut *mgr)),
-                f if f == ProtoMessageType::Sign as i32 => Box::new(SignHandler::new(&mut *mgr)),
+            let handler: Box<dyn Handler> = match message.flag {
+                f if f == ProtoMessageType::List as i32 => Box::new(ListHandler::new(&*manager)),
+                f if f == ProtoMessageType::Encrypt as i32 => Box::new(EncryptHandler::new(&*manager)),
+                f if f == ProtoMessageType::Sign as i32 => Box::new(SignHandler::new(&*manager)),
+                f if f == ProtoMessageType::Decrypt as i32 => Box::new(DecryptHandler::new(&*manager)),
                 _ =>  {
                     let reply = ProtoFactory::err( ProtoError::HandlingError(0, format!("Unexpected flag type: {}", message.flag)));
                     logger.log(format!("SERVER FAILED: {:?}", reply), Some(Level::EVENT))?;

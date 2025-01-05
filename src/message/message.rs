@@ -15,33 +15,48 @@ pub enum ProtoError {
 }
 
 impl ProtoFactory {
-    pub fn list(id: i32) -> ProtoMessage {
+    pub fn list(id: String, seq: i32) -> ProtoMessage {
         ProtoMessage {
-            id,
+            id: id, 
+            seq: seq,
             flag: ProtoMessageType::List as i32,
-            slot_id: 0,
+            slot: 0,
             pin: String::new(),
             err: false,
             data: vec![],
         }
     }
 
-    pub fn enc(id: i32, slot_id: u64, pin: String, data:String) -> ProtoMessage {
+    pub fn enc(id: String, seq: i32, slot: u64, pin: &String, data: &String) -> ProtoMessage {
         ProtoMessage {
-            id,
+            id: id, 
+            seq: seq,
             flag: ProtoMessageType::Encrypt as i32,
-            slot_id: slot_id,
+            slot: slot,
             pin: pin.clone(),
             err: false,
             data: vec!{data.clone()},
         }
     }
 
-    pub fn sign(id: i32, slot_id: u64, pin: String, data:String) -> ProtoMessage {
+    pub fn dec(id: String, seq: i32, slot: u64, pin: &String, data: &String) -> ProtoMessage {
         ProtoMessage {
-            id,
+            id: id, 
+            seq: seq,
+            flag: ProtoMessageType::Decrypt as i32,
+            slot: slot,
+            pin: pin.clone(),
+            err: false,
+            data: vec!{data.clone()},
+        }
+    }
+
+    pub fn sign(id: String, seq: i32, slot: u64, pin: &String, data: &String) -> ProtoMessage {
+        ProtoMessage {
+            id: id, 
+            seq: seq,
             flag: ProtoMessageType::Sign as i32,
-            slot_id: slot_id,
+            slot: slot,
             pin: pin.clone(),
             err: false,
             data: vec!{data.clone()},
@@ -49,15 +64,16 @@ impl ProtoFactory {
     }
 
     pub fn err(p_err: ProtoError) -> ProtoMessage {
-        let (id, e) = match p_err {
-           ProtoError::MessageError(m, e)   => (m.id, e), 
-           ProtoError::HandlingError(id, e) => (id, e)
+        let (id, seq, e) = match p_err {
+           ProtoError::MessageError(m, e)   => (m.id.clone(), m.seq, e), 
+           ProtoError::HandlingError(id, e) => (String::new(), id, e)
         };
 
         ProtoMessage {
             id: id,
+            seq: seq,
             flag: ProtoMessageType::Ack as i32,
-            slot_id: 0,
+            slot: 0,
             pin: String::new(),
             err: true,
             data: vec!{e},

@@ -40,7 +40,7 @@ impl Manager {
         Ok(data)
     }
 
-    pub fn encrypt(&mut self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn encrypt(&self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         let slot = self.slot(id)?;
         let slot = slot.lock().unwrap();
         let session = self.pkcs.open_rw_session(*slot)?;
@@ -56,9 +56,27 @@ impl Manager {
             data
         )?;
         Ok(ciphertext)
-        }
+    }
 
-    pub fn sign(&mut self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn decrypt(&self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+        let slot = self.slot(id)?;
+        let slot = slot.lock().unwrap();
+        let session = self.pkcs.open_rw_session(*slot)?;
+
+        session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
+
+        let search  = vec![Attribute::Class(ObjectClass::PUBLIC_KEY)];
+        let objects = session.find_objects(&search)?;
+        let key     = objects.get(0).ok_or("No public key found.")?;
+        let ciphertext = session.decrypt(
+            &Mechanism::RsaPkcs, 
+            *key, 
+            data
+        )?;
+        Ok(ciphertext)
+    }
+
+    pub fn sign(&self, id: u64, pin: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         let slot = self.slot(id)?;
         let slot = slot.lock().unwrap();
         let session = self.pkcs.open_rw_session(*slot)?;

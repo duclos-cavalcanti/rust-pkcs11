@@ -1,4 +1,10 @@
-Encrypt,786700906,1234,Hello
-Sign,786700906,1234,Test
-Encrypt,786700906,1234,Data
-Sign,786700907,5678,AnotherTest
+Encrypt,786700906,1234,HelloEncrypt
+Encrypt,786700906,1234,HelloEncrypt
+Sign,786700906,1234,HelloSign
+Encrypt,786700906,1234,NewData
+Sign,786700907,1234,WrongSlotID
+Sign,786700906,1239,WrongPIN
+Encrypt,1482650756,5678,HelloEncrypt
+Sign,1482650756,5678,HelloSign
+Encrypt,1125575704,3456,HelloEncrypt
+Sign,1125575704,3456,HelloSign

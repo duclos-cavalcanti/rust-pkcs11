@@ -7,13 +7,15 @@ enum ProtoMessageType {
     LIST = 1;
     ENCRYPT = 2;
     SIGN = 3;
+    DECRYPT = 4;
 }
 
 message ProtoMessage {
-    int32 id = 1;
-    ProtoMessageType flag = 2;
-    uint64 slot_id = 3;
-    string pin = 4;
-    bool  err = 5;
-    repeated string data = 6;
+    string id = 1;
+    int32 seq = 2;
+    ProtoMessageType flag = 3;
+    uint64 slot = 4;
+    string pin = 5;
+    bool err = 6;
+    repeated string data = 7;
 }
