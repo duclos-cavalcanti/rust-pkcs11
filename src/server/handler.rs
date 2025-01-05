@@ -64,21 +64,8 @@ impl<'a> Handler for EncryptHandler<'a> {
         let slot:u64    = message.slot;
         let pin:String  = message.pin.clone();
         let data:String = message.data[0].clone();
-
-        let ciphertext = self.manager.encrypt(slot, &pin, data.as_bytes()).map_err(|e| {
-            Box::from(format!("Encryption failed: {}", e)) as Box<dyn Error>
-        })?;
-
-        let plaintext = self.manager.decrypt(slot, &pin, &ciphertext).map_err(|e| {
-            Box::from(format!("Decryption failed: {}", e)) as Box<dyn Error>
-        })?;
-
+        let ciphertext = self.manager.encrypt(slot, &pin, data.as_bytes())?;
         reply.data.push(BASE64_STANDARD.encode(ciphertext));
-
-        match String::from_utf8(plaintext) {
-            Ok(t)  => reply.data.push(t),
-            Err(e) => return Err(Box::from(format!("Conversion Bytes to String failed: {}", e))),
-        }
         Ok(reply)
     }
 }
