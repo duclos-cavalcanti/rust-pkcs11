@@ -66,7 +66,7 @@ classDiagram
 ```bash 
 sudo apt update
 sudo apt install softhsm2 opensc
- sudo apt install libprotobuf-c-dev libprotobuf-dev protobuf-compiler protobuf-codegen
+sudo apt install libprotobuf-c-dev libprotobuf-dev protobuf-compiler protobuf-codegen
 ```
 
 ## Setup
